@@ -8,6 +8,7 @@ library(tidyverse)
 library(rvest)
 library(tidytext)
 library(forcats)
+library(wordcloud)
 library(wordcloud2)
 library(rworldmap)
 library(stringr)
@@ -44,7 +45,8 @@ speech_words <-
 speech_words %>% 
         anti_join(stop_words, by = "word") %>% 
         count(word, sort = TRUE) %>% 
-        wordcloud2(figPath = "trump.png") # Image downloaded from http://westviewnews.org/wp-content/uploads/2017/01/donald-trump-profile-silhouette-vector-graphic_template_1469623874993O0L.png
+        wordcloud2()
+        # wordcloud2(figPath = "trump.png") # Image downloaded from http://westviewnews.org/wp-content/uploads/2017/01/donald-trump-profile-silhouette-vector-graphic_template_1469623874993O0L.png
 ```
 
 
@@ -76,6 +78,25 @@ speech_words %>%
         comparison.cloud(colors = c("red", "blue"))
 ```
 
+# Let's look into specific emotions using the nrc sentiment dictionary
+
+First, look at the words associated with distinct emotions in the whole speech.
+
+```{r}
+speech_words %>%
+        inner_join(get_sentiments("nrc"), by = "word") %>% # Use distinct emotion dictionary
+        filter(!sentiment %in% c("positive","negative")) %>% # Only look for distinct emotions
+        group_by(sentiment) %>% 
+        count(sentiment, sort = T) %>% 
+        ggplot() +
+                aes(x = fct_reorder(sentiment %>% str_to_title, -n), y = n, label = n) +
+                geom_col() +
+                geom_label(vjust = 1) +
+                theme_minimal() +
+                labs(title = "The occurance of words linked to distinct emotions in the speech", x = "Word", y = "Frequency")
+```
+
+
 
 ```{r}
 # Load map database
@@ -90,6 +111,14 @@ trump_countries <-
         right_join(map_world, by = c("word" = "region")) %>% # Match country coordinates to speech
         select(region = word, everything())
 
+# Get country names with the middle of the country coordinates
+country_names <- 
+        trump_countries %>% 
+        drop_na(n) %>%
+        group_by(region) %>% 
+        summarise(lat = mean(lat),
+                  long = mean(long))
+
 # Countries mentioned in the speech and frequency
 trump_countries %>% 
         drop_na(n) %>% 
@@ -99,7 +128,13 @@ trump_countries %>%
         select(country = region, n) %>% 
         mutate(country = country %>% str_to_title()) %>% 
         arrange(-n) %>% 
-        print(n = 21)
+        ggplot() +
+                aes(x = fct_reorder(country, n), y = n) +
+                geom_col() +
+                coord_flip() +
+                theme_minimal() +
+                labs(title = "Mentions of a country", y = "Mentions", x = "Country")
+
 ```
 # Map countries with the number of mentions (USA excluded)
 
