@@ -80,7 +80,7 @@ speech_words %>%
 
 # Let's look into specific emotions using the nrc sentiment dictionary
 
-First, look at the words associated with distinct emotions in the whole speech.
+It is also possible to , look at the words associated with distinct emotions in the whole speech.
 
 ```{r}
 speech_words %>%
@@ -96,9 +96,11 @@ speech_words %>%
                 labs(title = "The occurance of words linked to distinct emotions in the speech", x = "Word", y = "Frequency")
 ```
 
+# Let's put the sentiments on a map
 
+First, let's see which countries were mentioned and how many times. Obviously, the (United States of) America is first! Venezuela, North Korea are on the second and third positions.
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 # Load map database
 map_world <- 
         map_data(map="world") %>% 
@@ -133,10 +135,12 @@ trump_countries %>%
                 geom_col() +
                 coord_flip() +
                 theme_minimal() +
-                labs(title = "Mentions of a country", y = "Mentions", x = "Country")
+                labs(title = "Mentions of a country", y = "Mentions", x = NULL)
 
 ```
 # Map countries with the number of mentions (USA excluded)
+
+How does this look like on a map? We concentrate on non-US countries, as the USA would 
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 trump_countries %>% 
@@ -167,7 +171,7 @@ sentence_sentiment <-
                                            is.na(sentiment) ~ NA_real_)) %>% 
         group_by(sentence_num) %>%
         summarise(sum_sentiment = sum(sentiment_score, na.rm = T),
-                  sentiments = paste(word, collapse = ", "))
+                  sentence = paste(word, collapse = " "))
 
 # Which sentence has a country name
 country_sentence <- 
@@ -189,16 +193,20 @@ country_sentiment <-
 
 ```
 
+# 
+So, How about looking into the text and and check 
+
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 sentence_sentiment %>% 
         full_join(country_sentence) %>% 
         mutate(sentiment_type = case_when(sum_sentiment >0 ~ "positive",
                                          sum_sentiment <0 ~ "negative")) %>% 
         ggplot() +
-                aes(x = sentence_num, y = sum_sentiment) +
-                geom_hline(yintercept = 0, color = "black", linetype = "dashed", size = 1.2) +
-                geom_line() +
-                geom_label_repel(aes(label = word %>% str_to_title(), fill = sentiment_type)) +
+                aes(x = sentence_num, y = sum_sentiment, label = word %>% str_to_title()) +
+                geom_hline(yintercept = 0, color = "grey", linetype = "dashed", size = 1.2) +
+                # geom_line() +
+                geom_label_repel(aes(fill = sentiment_type), alpha = .8) +
+                geom_smooth(span = 0.1, se = T, size = 1.2, color = "black") +
                 theme_minimal() +
                 labs(title = "The appearance of country names in the speech by sentiment in sentence order", x = "Sentence number", y = "Summarised sentiment")
 
@@ -208,7 +216,7 @@ sentence_sentiment %>%
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 trump_countries %>% 
         left_join(country_sentiment) %>% 
-        mutate(country_sentiment = if_else(region == "usa", NA_real_, country_sentiment)) %>% 
+        mutate(country_sentiment = if_else(region == "usa", NA_real_, country_sentiment)) %>% # Exclude US
         ggplot() +
                 aes(map_id = region, x = long, y = lat, fill = country_sentiment, label = region %>% str_to_title()) +
                 geom_map(map = trump_countries) +
