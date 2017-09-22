@@ -140,7 +140,7 @@ trump_countries %>%
 ```
 # Map countries with the number of mentions (USA excluded)
 
-How does this look like on a map? We concentrate on non-US countries, as the USA would 
+How does this look like on a map? We concentrate on non-US countries, as the USA would outweigh all differences between other countries.
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 trump_countries %>% 
@@ -205,10 +205,10 @@ sentence_sentiment %>%
                 aes(x = sentence_num, y = sum_sentiment, label = word %>% str_to_title()) +
                 geom_hline(yintercept = 0, color = "grey", linetype = "dashed", size = 1.2) +
                 # geom_line() +
-                geom_label_repel(aes(fill = sentiment_type), alpha = .8) +
+                geom_label_repel(aes(fill = sentiment_type), alpha = .8, segment.alpha = 0) +
                 geom_smooth(span = 0.1, se = T, size = 1.2, color = "black") +
                 theme_minimal() +
-                labs(title = "The appearance of country names in the speech by sentiment in sentence order", x = "Sentence number", y = "Summarised sentiment")
+                labs(title = "The summarised sentiment of sentences, and the appearance of country names in the speech \nby sentiment in sentence order", x = "Sentence number", y = "Summarised sentiment", subtitle = "The dashed line signifies no sentiment in the sentence. \nCountry label colors show the direction of the sentiment (positive/negative)")
 
 ```
 
