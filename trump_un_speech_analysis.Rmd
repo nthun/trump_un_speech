@@ -4,6 +4,7 @@ output: html_notebook
 ---
 
 ```{r message=FALSE, warning=FALSE}
+library(magrittr)
 library(tidyverse)
 library(rvest)
 library(tidytext)
@@ -13,6 +14,7 @@ library(wordcloud2)
 library(rworldmap)
 library(stringr)
 library(ggrepel)
+library(hunspell)
 ```
 
 ```{r}
@@ -37,11 +39,18 @@ speech_sentences <-
 speech_words <- 
         speech_excerpt %>% 
         unnest_tokens(word, paragraph, token = "words") %>% 
-        mutate(word = gsub("_", " ", word))
+        mutate(word = gsub("_", " ", word)) %>% 
+        # Here comes a nasty manual stemming of country names. Sadly, I failed to get satisfactory results  on country names with standard stemmers (I tried snowballC, hunspell, and textstem). I also tried to create a custom dictionary with added country names to no avail. What am I missing? Anyway, this works.
+        mutate(word = word %>% 
+                       str_replace_all("'s$","") %>% # Cut 's
+                       if_else(. == "iranian", "iran", .) %>% 
+                       if_else(. %in% c("usans", "north koreans"), str_replace(., "ns$",""),.) %>% 
+                       if_else(. %in% c("usan","syrian","african","cuban","venezuelan"), str_replace(., "n$",""),.)
+        )
 ```
 
 
-```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
 speech_words %>% 
         anti_join(stop_words, by = "word") %>% 
         count(word, sort = TRUE) %>% 
@@ -61,13 +70,12 @@ speech_words %>%
                 aes(y = n, x = fct_reorder(word, n), fill = sentiment) +
                 geom_col() +
                 coord_flip() +
-                labs(x = "word", y ="Occurance in speech") +
-                ggtitle("Most common words in Trump's 17/09/19 UN speech by sentiment")
-
-
+                labs(x = "word", 
+                     y ="Occurance in speech",
+                     title = "Most common words in Trump's 17/09/19 UN speech by sentiment")
 ```
 # Comparison cloud of all words
-```{r fig.height=10, fig.width=10}
+```{r fig.height=8, fig.width=8}
 speech_words %>%
         inner_join(get_sentiments("bing"), by = "word") %>% 
         count(word, sentiment, sort = TRUE) %>%
@@ -89,16 +97,20 @@ speech_words %>%
         group_by(sentiment) %>% 
         count(sentiment, sort = T) %>% 
         ggplot() +
-                aes(x = fct_reorder(sentiment %>% str_to_title, -n), y = n, label = n) +
+                aes(x = fct_reorder(sentiment %>% str_to_title, -n), 
+                    y = n, 
+                    label = n) +
                 geom_col() +
                 geom_label(vjust = 1) +
                 theme_minimal() +
-                labs(title = "The occurance of words linked to distinct emotions in the speech", x = "Word", y = "Frequency")
+                labs(title = "The occurance of words linked to distinct emotions in the speech", 
+                     x = "Word", 
+                     y = "Frequency")
 ```
 
 # Let's put the sentiments on a map
 
-First, let's see which countries were mentioned and how many times. Obviously, the (United States of) America is first! Venezuela, North Korea are on the second and third positions.
+First, let's see which countries were mentioned and how many times. Obviously, the (United States of) America is first! Iran, Venezuela, North Korea were also mentioned more than 5 times.
 
 ```{r message=FALSE, warning=FALSE}
 # Load map database
@@ -121,22 +133,6 @@ country_names <-
         summarise(lat = mean(lat),
                   long = mean(long))
 
-# Countries mentioned in the speech and frequency
-trump_countries %>% 
-        drop_na(n) %>% 
-        group_by(region) %>% 
-        slice(1) %>% 
-        ungroup() %>% 
-        select(country = region, n) %>% 
-        mutate(country = country %>% str_to_title()) %>% 
-        arrange(-n) %>% 
-        ggplot() +
-                aes(x = fct_reorder(country, n), y = n) +
-                geom_col() +
-                coord_flip() +
-                theme_minimal() +
-                labs(title = "Mentions of a country", y = "Mentions", x = NULL)
-
 ```
 # Map countries with the number of mentions (USA excluded)
 
@@ -144,14 +140,26 @@ How does this look like on a map? We concentrate on non-US countries, as the USA
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 trump_countries %>% 
-        mutate(n = if_else(region == "usa", NA_integer_, n)) %>%
-ggplot() +
-        aes(map_id = region, x = long, y = lat, fill = n, label = region %>% str_to_title()) +
-        geom_map(map = trump_countries) +
-        # geom_text(data = trump_countries %>% drop_na(n) %>% group_by(region) %>% slice(1)) +
-        scale_fill_gradient(low = "lightblue", high = "darkblue", na.value = "grey90") +
+        ggplot() +
+        aes(map_id = region, 
+            x = long, 
+            y = lat, 
+            label = paste0(region %>% str_to_title(),": ", n)) +
+        geom_map(aes(fill = n %>% log10(.)), 
+                 map = trump_countries) +
+        geom_label_repel(data = trump_countries %>% 
+                                 drop_na(n) %>% 
+                                 group_by(region) %>% 
+                                 slice(1), 
+                         alpha = .75) +
+        scale_fill_gradient(low = "lightblue", 
+                            high = "darkblue", 
+                            na.value = "grey90") +
+        labs(title = "Number of mentions by country", 
+             x = "Longitude", 
+             y = "Latitude") +
         theme_minimal() +
-        labs(title = "Number of mentions by country (USA excluded)", x = "Longitude", y = "Latitude")
+        theme(legend.position = "none")
 
 
 ```
@@ -165,6 +173,13 @@ sentence_sentiment <-
                ) %>% 
         unnest_tokens(word, sentence, "words") %>% 
         mutate(word = gsub("_", " ", word)) %>% 
+        # Here comes a nasty manual stemming of country names. Sadly, I failed to get satisfactory results  on country names with standard stemmers (I tried snowballC, hunspell, and textstem). I also tried to create a custom dictionary with added country names to no avail. What am I missing? Anyway, this works.        
+                mutate(word = word %>% 
+                       str_replace_all("'s$","") %>% # Cut 's
+                       if_else(. == "iranian", "iran", .) %>% 
+                       if_else(. %in% c("usans", "north koreans"), str_replace(., "ns$",""),.) %>% 
+                       if_else(. %in% c("usan","syrian","african","cuban","venezuelan"), str_replace(., "n$",""),.)
+        ) %>% 
         left_join(get_sentiments("bing"), by = "word") %>% 
         mutate(sentiment_score = case_when(sentiment == "positive" ~ 1,
                                            sentiment == "negative" ~ -1,
@@ -193,7 +208,6 @@ country_sentiment <-
 
 ```
 
-# 
 So, How about looking into the text and and check 
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
@@ -202,13 +216,25 @@ sentence_sentiment %>%
         mutate(sentiment_type = case_when(sum_sentiment >0 ~ "positive",
                                          sum_sentiment <0 ~ "negative")) %>% 
         ggplot() +
-                aes(x = sentence_num, y = sum_sentiment, label = word %>% str_to_title()) +
-                geom_hline(yintercept = 0, color = "grey", linetype = "dashed", size = 1.2) +
-                # geom_line() +
-                geom_label_repel(aes(fill = sentiment_type), alpha = .8, segment.alpha = 0) +
-                geom_smooth(span = 0.1, se = T, size = 1.2, color = "black") +
+                aes(x = sentence_num, 
+                    y = sum_sentiment, 
+                    label = word %>% str_to_title()) +
+                geom_hline(yintercept = 0, 
+                           color = "grey", 
+                           linetype = "dashed", 
+                           size = 1.2) +
+                geom_smooth(span = 0.05, 
+                            se = T, 
+                            size = 1.2, 
+                            color = "black") +
+                geom_label_repel(aes(fill = sentiment_type), 
+                                 alpha = .8, 
+                                 segment.alpha = 0) +
                 theme_minimal() +
-                labs(title = "The summarised sentiment of sentences, and the appearance of country names in the speech \nby sentiment in sentence order", x = "Sentence number", y = "Summarised sentiment", subtitle = "The dashed line signifies no sentiment in the sentence. \nCountry label colors show the direction of the sentiment (positive/negative)")
+                labs(x = "Sentence number", 
+                     y = "Summarised sentiment", 
+                     title = "The summarised sentiment of sentences, and the appearance of country names in the speech \nby sentiment in sentence order",
+                     subtitle = "The dashed line signifies no sentiment in the sentence. \nCountry label colors show the direction of the sentiment (positive/negative)")
 
 ```
 
@@ -218,11 +244,20 @@ trump_countries %>%
         left_join(country_sentiment) %>% 
         mutate(country_sentiment = if_else(region == "usa", NA_real_, country_sentiment)) %>% # Exclude US
         ggplot() +
-                aes(map_id = region, x = long, y = lat, fill = country_sentiment, label = region %>% str_to_title()) +
+                aes(map_id = region, 
+                    x = long, 
+                    y = lat, 
+                    fill = country_sentiment, 
+                    label = region %>% str_to_title()) +
                 geom_map(map = trump_countries) +
-                scale_fill_gradient(high = "green", low = "red", guide = "colourbar", na.value = "grey90") +
+                scale_fill_gradient(high = "green", 
+                                    low = "red", 
+                                    guide = "colourbar", 
+                                    na.value = "grey90") +
                 theme_minimal() +
-                labs(title = "Sentiment of the sentences where countries were mentioned (USA excluded)", x = "Longitude", y = "Latitude")
+                labs(title = "Sentiment of the sentences where countries were mentioned (USA excluded)", 
+                     x = "Longitude", 
+                     y = "Latitude")
 
 ```
 
