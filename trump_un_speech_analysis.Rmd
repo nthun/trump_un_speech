@@ -15,6 +15,8 @@ library(rworldmap)
 library(stringr)
 library(ggrepel)
 library(hunspell)
+library(igraph)
+library(ggraph)
 ```
 
 ```{r}
@@ -167,23 +169,23 @@ trump_countries %>%
 ```{r}
 # Sentiment of each sentence
 sentence_sentiment <-
-        speech_sentences %>% 
+speech_sentences %>% 
         mutate(sentence_num = row_number(),
                sentence_length = length(sentence)
-               ) %>% 
+        ) %>% 
         unnest_tokens(word, sentence, "words") %>% 
         mutate(word = gsub("_", " ", word)) %>% 
         # Here comes a nasty manual stemming of country names. Sadly, I failed to get satisfactory results  on country names with standard stemmers (I tried snowballC, hunspell, and textstem). I also tried to create a custom dictionary with added country names to no avail. What am I missing? Anyway, this works.        
-                mutate(word = word %>% 
+        mutate(word = word %>% 
                        str_replace_all("'s$","") %>% # Cut 's
                        if_else(. == "iranian", "iran", .) %>% 
                        if_else(. %in% c("usans", "north koreans"), str_replace(., "ns$",""),.) %>% 
                        if_else(. %in% c("usan","syrian","african","cuban","venezuelan"), str_replace(., "n$",""),.)
         ) %>% 
-        left_join(get_sentiments("bing"), by = "word") %>% 
+        left_join(get_sentiments("bing"), by = "word") %>%
         mutate(sentiment_score = case_when(sentiment == "positive" ~ 1,
                                            sentiment == "negative" ~ -1,
-                                           is.na(sentiment) ~ NA_real_)) %>% 
+                                           is.na(sentiment) ~ NA_real_)) %>%
         group_by(sentence_num) %>%
         summarise(sum_sentiment = sum(sentiment_score, na.rm = T),
                   sentence = paste(word, collapse = " "))
@@ -204,7 +206,7 @@ country_sentiment <-
         select(region = word, sum_sentiment) %>% 
         drop_na() %>% 
         group_by(region) %>% 
-        summarise(country_sentiment = sum(sum_sentiment))
+        summarise(country_sentiment = sum(sum_sentiment, na.rm = T))
 
 ```
 
@@ -214,7 +216,11 @@ So, How about looking into the text and and check
 sentence_sentiment %>% 
         full_join(country_sentence) %>% 
         mutate(sentiment_type = case_when(sum_sentiment >0 ~ "positive",
-                                         sum_sentiment <0 ~ "negative")) %>% 
+                                          sum_sentiment <0 ~ "negative",
+                                          sum_sentiment == 0 ~ "neutral") %>% 
+                                fct_rev()
+                       ) %>% 
+        
         ggplot() +
                 aes(x = sentence_num, 
                     y = sum_sentiment, 
@@ -230,30 +236,40 @@ sentence_sentiment %>%
                 geom_label_repel(aes(fill = sentiment_type), 
                                  alpha = .8, 
                                  segment.alpha = 0) +
+                scale_fill_manual(values = c("green","grey","red")) +
                 theme_minimal() +
                 labs(x = "Sentence number", 
-                     y = "Summarised sentiment", 
+                     y = "Sentence sentiment", 
                      title = "The summarised sentiment of sentences, and the appearance of country names in the speech \nby sentiment in sentence order",
-                     subtitle = "The dashed line signifies no sentiment in the sentence. \nCountry label colors show the direction of the sentiment (positive/negative)")
+                     subtitle = "The dashed line signifies neutral sentence sentiment. \nCountry label colors show the direction of the sentiment (positive/negative)") 
 
 ```
 
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
-trump_countries %>% 
-        left_join(country_sentiment) %>% 
+sentiment_map_data <- 
+        trump_countries %>% 
+        left_join(country_sentiment, by = "region")
+
+sentiment_map_data %>% 
         mutate(country_sentiment = if_else(region == "usa", NA_real_, country_sentiment)) %>% # Exclude US
         ggplot() +
-                aes(map_id = region, 
-                    x = long, 
-                    y = lat, 
-                    fill = country_sentiment, 
-                    label = region %>% str_to_title()) +
-                geom_map(map = trump_countries) +
+                aes(    map_id = region, 
+                        x = long, 
+                        y = lat, 
+                        label = paste0(region %>% str_to_title(), ": ", country_sentiment)
+                        ) +
+                geom_map(aes(fill = country_sentiment), 
+                         map = trump_countries) +
                 scale_fill_gradient(high = "green", 
                                     low = "red", 
-                                    guide = "colourbar", 
                                     na.value = "grey90") +
+                geom_label_repel(data = sentiment_map_data %>%
+                                         drop_na(n) %>%
+                                         group_by(region) %>%
+                                         slice(1),
+                                         alpha = .5
+                                 ) +
                 theme_minimal() +
                 labs(title = "Sentiment of the sentences where countries were mentioned (USA excluded)", 
                      x = "Longitude", 
