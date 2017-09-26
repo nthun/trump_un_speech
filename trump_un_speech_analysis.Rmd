@@ -1,7 +1,17 @@
 ---
-title: "R Notebook"
+title: "Is it the beginning of the end? - Text mining Donald Trumps UN speech"
 output: html_notebook
 ---
+
+The UN speech that US president Donald Trump gave to the United Nations General Assembly on Sept. 19, 2017 was fascinating for several reasons. For me personally, it was interesting because the speech included complex sentences, and the content was much more complex than all previous talks that I'd heard from him. Several countries were mentioned in the talk, in different emotional contexts. 
+
+So I started to wondered which countries were mentioned in 
+
+However, 
+
+![](http://www.reactiongifs.us/wp-content/uploads/2013/10/nuh_uh_conan_obrien.gif)
+
+http://i0.kym-cdn.com/photos/images/newsfeed/000/519/726/2bf.gif
 
 ```{r message=FALSE, warning=FALSE}
 library(magrittr)
