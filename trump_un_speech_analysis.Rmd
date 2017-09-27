@@ -1,16 +1,13 @@
 ---
-title: "Is this the beginning of the end? - Text mining Donald Trumps UN speech"
-output: html_notebook
+title: "Is this the end of the world or what? - Text mining Donald Trump's UN covfefe"
+output:
+  html_document:
+    df_print: paged
 ---
 
-The UN speech that US president Donald Trump gave to the United Nations General Assembly on Sept. 19, 2017 was fascinating for several reasons. For me personally, it was interesting because the speech included surprisingly complex sentences and ideas, that was not characteristic of Trump's  previous talks. 
-Addressing the UN, several countries were mentioned. Some in a positive and some in a negative context. 
+The UN speech that US president Donald Trump gave to the United Nations General Assembly on Sept. 19, 2017 was fascinating for several reasons. For me personally, it was interesting because the speech included surprisingly complex sentences and statements, not characteristic of Trump's  previous talks. It was also intriguing because this speech was quite undiplomatic and fierce to a point that steered the world to the brink of a thermonuclear war. At least North Korea is genuinely pissed.
 
-Several countries were mentioned in the talk, in different emotional contexts. 
-
-So I started to wondered which countries were mentioned in 
-
-However, 
+As it can be expected when a president addresses the UN, several countries were mentioned in the speech; some in a favorable and others in a negative context. I wanted to make an analysis that connects the sentiments of the speech with the countries, to see how these countries are regarded by the US. 
 
 <center>
 ![](http://i0.kym-cdn.com/photos/images/newsfeed/000/519/726/2bf.gif)
@@ -31,6 +28,7 @@ library(ggrepel)
 ```
 
 ```{r}
+# Get speech excerpt
 url <- "http://www.politico.com/story/2017/09/19/trump-un-speech-2017-full-text-transcript-242879"
 speech_excerpt <- 
         read_html(url) %>% # Download whole homepage
@@ -38,17 +36,20 @@ speech_excerpt <-
         html_text() %>% # Make it text
         .[-2] %>% # Remove some random homepage text
         gsub("Mr.", "Mr", ., fixed = T) %>% # Make sure that dots in the text will not signify sentences
+        gsub("Latin America","latin_america",.) %>% # Not to confuse with USA
         gsub("United States of America", "usa", .) %>% # USA has to be preserved as one expression
         gsub("United States", "usa", .) %>% 
         gsub("America", "usa", .) %>% 
-        gsub("States", "usa", .) %>% 
+        gsub("Britain", "uk", .) %>% # UK is mentioned 
         gsub("North Korea", "north_korea", .) %>% # North Korea should be preserved as one word for now
         data_frame(paragraph = .)
-                        
+
+# Tokenize by sentence                        
 speech_sentences <- 
         speech_excerpt %>% 
         unnest_tokens(sentence, paragraph, token = "sentences")
         
+# Tokenize by word
 speech_words <- 
         speech_excerpt %>% 
         unnest_tokens(word, paragraph, token = "words") %>% 
@@ -62,22 +63,26 @@ speech_words <-
         )
 ```
 
+# Exploring the text
 
-```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
+The following word cloud shows the words mentioned in the speech. Larger words were used more frequently than smaller ones.
+
+```{r fig.height=7, fig.width=7, message=FALSE, warning=FALSE}
 speech_words %>% 
         anti_join(stop_words, by = "word") %>% 
         count(word, sort = TRUE) %>% 
         wordcloud2()
-        # wordcloud2(figPath = "trump.png") # Image downloaded from http://westviewnews.org/wp-content/uploads/2017/01/donald-trump-profile-silhouette-vector-graphic_template_1469623874993O0L.png
+        # wordcloud2(figPath = "trump.png") # Wanted to make a wordcloud in the form of Trump's head, but the package has a know bug that prevented me to do so.
 ```
 
+Next, I looked at the most frequent emotional words - that was used at least three times - in the  speech. It turns out that the majority of frequent emotional words had a positive connotation (e.g. prosperity, support, strong, etc.). From the negative words, the most frequent emotional words were related to conflict (conflict, confront, etc.).
 
 ```{r fig.width=10}
 # Check emotional words that were uttered at least 3 times
 speech_words %>% 
-        count(word, sort = TRUE) %>% 
+        count(word) %>% 
         inner_join(get_sentiments("bing"), by = "word") %>% 
-        filter(n > 3) %>% 
+        filter(n >= 3) %>% 
         mutate(n = if_else(sentiment == "negative", -n, n)) %>% 
         ggplot() +
                 aes(y = n, x = fct_reorder(word, n), fill = sentiment) +
@@ -87,7 +92,9 @@ speech_words %>%
                      y ="Occurance in speech",
                      title = "Most common words in Trump's 17/09/19 UN speech by sentiment")
 ```
-# Comparison cloud of all words
+
+Just to show the less frequent emotional words too, the next word cloud shows all emotional word sentiments.
+
 ```{r fig.height=8, fig.width=8}
 speech_words %>%
         inner_join(get_sentiments("bing"), by = "word") %>% 
@@ -99,9 +106,8 @@ speech_words %>%
         comparison.cloud(colors = c("red", "blue"))
 ```
 
-# Let's look into specific emotions using the nrc sentiment dictionary
-
-It is also possible to , look at the words associated with distinct emotions in the whole speech.
+Let's look into specific emotions using the NRC sentiment dictionary! 
+It is also possible to make an association between certain words and distinct emotions. The next plot shows the frequency of each emotion in the talk It seems like the emotion that dominated the speech was trust, followed by fear and anticipation.
 
 ```{r}
 speech_words %>%
@@ -147,9 +153,8 @@ country_names <-
                   long = mean(long))
 
 ```
-# Map countries with the number of mentions (USA excluded)
 
-How does this look like on a map? We concentrate on non-US countries, as the USA would outweigh all differences between other countries.
+Let's see which countries are mentioned the most times. Obviously, the USA! Also Iran, Venezuela, and North Korea are mentioned several times. Apart from these, most countries are mentioned only a couple of times during the speech.
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 trump_countries %>% 
@@ -176,6 +181,9 @@ trump_countries %>%
 
 
 ```
+
+Next, I wanted to see how the speech developed over time, and what was the sentiment of the sentences. 
+Moreover, I wanted to include which countries were mentioned in particular parts of the talk.
 
 ```{r}
 # Sentiment of each sentence
@@ -221,27 +229,29 @@ country_sentiment <-
 
 ```
 
-So, How about looking into the text and and check 
+
+
+looking into the text and and check 
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 sentence_sentiment %>% 
         full_join(country_sentence) %>% 
-        mutate(sentiment_type = case_when(sum_sentiment >0 ~ "positive",
-                                          sum_sentiment <0 ~ "negative",
-                                          sum_sentiment == 0 ~ "neutral") %>% 
-                                fct_rev()
-                       ) %>% 
-        
+        mutate(roll_sentiment = zoo::rollmean(sum_sentiment, 3, na.pad=TRUE, align="center")) %>% 
+        mutate(sentiment_type = case_when(roll_sentiment >0 ~ "positive",
+                                          roll_sentiment <0 ~ "negative",
+                                          roll_sentiment == 0 ~ "neutral") %>% 
+                       fct_rev()
+        ) %>% 
         ggplot() +
                 aes(x = sentence_num, 
-                    y = sum_sentiment, 
+                    y = roll_sentiment, 
                     label = word %>% str_to_title()) +
                 geom_hline(yintercept = 0, 
                            color = "grey", 
                            linetype = "dashed", 
                            size = 1.2) +
                 geom_smooth(span = 0.05, 
-                            se = T, 
+                            se = F, 
                             size = 1.2, 
                             color = "black") +
                 geom_label_repel(aes(fill = sentiment_type), 
@@ -256,6 +266,13 @@ sentence_sentiment %>%
 
 ```
 
+First, it is important to note that the sentiment analysis is based on the summarized sentiments for each sentence, which can be misleading. For example, in the middle of the speech, Israel and the US are mentioned in a very negative sentence, but it is because it is mentioned how Iran speaking openly about mass murder 
+
+
+
+As we can see, Trump started the speech with positive statements, and praised the USA. Then North Korea, China, Ukraine, Russia, and Israel were mentioned in a negative context. Then again, several Middle Eastern and African countries were mentioned in a generally positive context. South American countries - such as Cuba, and especially Venezuela - were also scolded here, and as the US 
+
+So, how about summarizing the country sentiments throughout the whole text, and plot them on a map, to see which countries 
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 sentiment_map_data <- 
