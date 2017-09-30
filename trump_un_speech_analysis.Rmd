@@ -1,5 +1,5 @@
 ---
-title: "Is this the end of the world or what? - Text mining Donald Trump's UN covfefe"
+title: "Is this the end of the world as we know it? - Text mining Donald Trump's UN covfefe"
 output:
   html_document:
     df_print: paged
@@ -229,17 +229,17 @@ country_sentiment <-
 
 ```
 
+# Checking how the speech sentiment develops over time, and what countries are mentioned
 
-
-looking into the text and and check 
+First, it is important to note that the sentiment analysis is based on the summarized sentiments for each sentence, which can be misleading. For example, in the middle of the speech, Israel and the US are mentioned in a very negative sentence. However, the negative tone was created to condemn Iran in the next sentence. So, you can see that the isolated analysis of the sentences can be misleading. To mitigate this error, I calculated the rolling mean for the sentence sentiments, so each sentence now contains the "spillover" sentiment from previous and following sentences.
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 sentence_sentiment %>% 
         full_join(country_sentence) %>% 
-        mutate(roll_sentiment = zoo::rollmean(sum_sentiment, 3, na.pad=TRUE, align="center")) %>% 
-        mutate(sentiment_type = case_when(roll_sentiment >0 ~ "positive",
-                                          roll_sentiment <0 ~ "negative",
-                                          roll_sentiment == 0 ~ "neutral") %>% 
+        mutate(roll_sentiment = zoo::rollmean(sum_sentiment, 3, fill = 0, align = "center")) %>% # Calculate a rolling mean with a window of 3
+        mutate(sentiment_type = case_when(roll_sentiment > .5 ~ "positive",
+                                          roll_sentiment < (-.5) ~ "negative",
+                                          (roll_sentiment > -.5 & roll_sentiment < .5) ~ "neutral") %>% # Label sentence sentiments based on rolling mean
                        fct_rev()
         ) %>% 
         ggplot() +
@@ -250,13 +250,11 @@ sentence_sentiment %>%
                            color = "grey", 
                            linetype = "dashed", 
                            size = 1.2) +
-                geom_smooth(span = 0.05, 
-                            se = F, 
-                            size = 1.2, 
+                geom_line(size = 1.2, 
                             color = "black") +
                 geom_label_repel(aes(fill = sentiment_type), 
                                  alpha = .8, 
-                                 segment.alpha = 0) +
+                                 segment.alpha = 0.5) +
                 scale_fill_manual(values = c("green","grey","red")) +
                 theme_minimal() +
                 labs(x = "Sentence number", 
@@ -266,11 +264,11 @@ sentence_sentiment %>%
 
 ```
 
-First, it is important to note that the sentiment analysis is based on the summarized sentiments for each sentence, which can be misleading. For example, in the middle of the speech, Israel and the US are mentioned in a very negative sentence, but it is because it is mentioned how Iran speaking openly about mass murder 
 
 
+As we can see, Trump started off the speech with positive statements, and mostly praised the USA. Then he came up with his black list, with North Korea, China, Ukraine, Russia, and Israel mentioned in a negative context. Then the speech took a positive turn, and several Middle Eastern and African countries were referenced in a generally favorable context. 
 
-As we can see, Trump started the speech with positive statements, and praised the USA. Then North Korea, China, Ukraine, Russia, and Israel were mentioned in a negative context. Then again, several Middle Eastern and African countries were mentioned in a generally positive context. South American countries - such as Cuba, and especially Venezuela - were also scolded here, and as the US 
+South American countries - such as Cuba, and especially Venezuela - were also scolded here, and as the US 
 
 So, how about summarizing the country sentiments throughout the whole text, and plot them on a map, to see which countries 
 
