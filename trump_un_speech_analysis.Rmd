@@ -129,7 +129,8 @@ speech_words %>%
 
 # Let's put the sentiments on a map
 
-First, let's see which countries were mentioned and how many times. Obviously, the (United States of) America is first! Iran, Venezuela, North Korea were also mentioned more than 5 times.
+
+Let's see which countries are mentioned the most times. Obviously, the USA! Also Iran, Venezuela, and North Korea are mentioned several times. Apart from these, most countries are mentioned only a couple of times during the speech.
 
 ```{r message=FALSE, warning=FALSE}
 # Load map database
@@ -154,7 +155,6 @@ country_names <-
 
 ```
 
-Let's see which countries are mentioned the most times. Obviously, the USA! Also Iran, Venezuela, and North Korea are mentioned several times. Apart from these, most countries are mentioned only a couple of times during the speech.
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 trump_countries %>% 
