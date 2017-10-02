@@ -7,7 +7,7 @@ output:
 
 The UN speech that US president Donald Trump gave to the United Nations General Assembly on Sept. 19, 2017 was fascinating for several reasons. For me personally, it was interesting because the speech included surprisingly complex sentences and statements, not characteristic of Trump's  previous talks. It was also intriguing because this speech was quite undiplomatic and fierce to a point that steered the world to the brink of a thermonuclear war. At least North Korea is genuinely pissed.
 
-As it can be expected when a president addresses the UN, several countries were mentioned in the speech; some in a favorable and others in a negative context. I wanted to make an analysis that connects the sentiments of the speech with the countries, to see how these countries are regarded by the US. 
+As it can be expected when a president addresses the UN, several countries were mentioned in the speech; some in a favorable and others in a negative context. I wanted to make an analysis that connects the sentiments of the speech with the countries. This analysis of course does not reflect the USA's opinion on the mentions, as the text is too short for this, and some countries are only mentioned a couple of times. 
 
 <center>
 ![](http://i0.kym-cdn.com/photos/images/newsfeed/000/519/726/2bf.gif)
