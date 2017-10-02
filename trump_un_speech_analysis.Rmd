@@ -264,13 +264,11 @@ sentence_sentiment %>%
 
 ```
 
+As we can see, Trump started off the speech with positive statements, and mostly praised the USA. Then he came up with his black list, with North Korea, China, Ukraine, Russia, and Israel mentioned in a negative context. As USA is also mingled in these sentences, it is unavoidable that it also receives some negative sentiment.
+Then the speech took a positive turn, and several Middle Eastern and African countries were referenced in a generally favorable context. 
+Later, South American countries - such as Cuba, and especially Venezuela - are mentioned along with some harsh words, while European countries like Poland, France, and UK are receive some kindness.
 
-
-As we can see, Trump started off the speech with positive statements, and mostly praised the USA. Then he came up with his black list, with North Korea, China, Ukraine, Russia, and Israel mentioned in a negative context. Then the speech took a positive turn, and several Middle Eastern and African countries were referenced in a generally favorable context. 
-
-South American countries - such as Cuba, and especially Venezuela - were also scolded here, and as the US 
-
-So, how about summarizing the country sentiments throughout the whole text, and plot them on a map, to see which countries 
+So, how about summarizing the country sentiments throughout the whole text, and plot them on a map, to see what emotional context each country is mentioned?
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 sentiment_map_data <- 
@@ -303,3 +301,4 @@ sentiment_map_data %>%
 
 ```
 
+All in all, this notebook shows the emotional tone of how countries were mentioned in Trump's UN speech. Obviously, sentiment scores do not necessarily reflect the US's opinion on these countries, especially for those with very few mentions. However, this method may be used in longer texts to demonstrate how certain topics (in this case, countries) can be associated with sentiments. 
