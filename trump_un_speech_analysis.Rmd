@@ -1,8 +1,11 @@
 ---
 title: "Is this the end of the world as we know it? - Text mining Donald Trump's UN covfefe"
-output:
+author: Tamás Nagy @nagyt
+date: "20th September, 2017"
+output: 
   html_document:
     df_print: paged
+
 ---
 
 The UN speech that US president Donald Trump gave to the United Nations General Assembly on Sept. 19, 2017 was fascinating for several reasons. For me personally, it was interesting because the speech included surprisingly complex sentences and statements, not characteristic of Trump's  previous talks. It was also intriguing because this speech was quite undiplomatic and fierce to a point that steered the world to the brink of a thermonuclear war. At least North Korea is genuinely pissed.
@@ -67,7 +70,7 @@ speech_words <-
 
 The following word cloud shows the words mentioned in the speech. Larger words were used more frequently than smaller ones.
 
-```{r fig.height=7, fig.width=7, message=FALSE, warning=FALSE}
+```{r fig.height=9, fig.width=9, message=FALSE, warning=FALSE}
 speech_words %>% 
         anti_join(stop_words, by = "word") %>% 
         count(word, sort = TRUE) %>% 
@@ -75,7 +78,7 @@ speech_words %>%
         # wordcloud2(figPath = "trump.png") # Wanted to make a wordcloud in the form of Trump's head, but the package has a know bug that prevented me to do so.
 ```
 
-Next, I looked at the most frequent emotional words - that was used at least three times - in the  speech. It turns out that the majority of frequent emotional words had a positive connotation (e.g. prosperity, support, strong, etc.). From the negative words, the most frequent emotional words were related to conflict (conflict, confront, etc.).
+Next, I looked at the most frequent emotional words - used at least three times - in the  speech. It turns out that the majority of frequent emotional words had a positive connotation (e.g. prosperity, support, strong, etc.). The most frequent emotional words were related to conflict (conflict, confront, etc.).
 
 ```{r fig.width=10}
 # Check emotional words that were uttered at least 3 times
@@ -93,7 +96,7 @@ speech_words %>%
                      title = "Most common words in Trump's 17/09/19 UN speech by sentiment")
 ```
 
-Just to show the less frequent emotional words too, the next word cloud shows all emotional word sentiments.
+Just to show the less frequent emotional words too, the next word cloud shows all emotional word sentiments. It is actually a comparison cloud, which clusters words with different sentiments together, and colors them differently.
 
 ```{r fig.height=8, fig.width=8}
 speech_words %>%
@@ -106,31 +109,8 @@ speech_words %>%
         comparison.cloud(colors = c("red", "blue"))
 ```
 
-Let's look into specific emotions using the NRC sentiment dictionary! 
-It is also possible to make an association between certain words and distinct emotions. The next plot shows the frequency of each emotion in the talk It seems like the emotion that dominated the speech was trust, followed by fear and anticipation.
-
-```{r}
-speech_words %>%
-        inner_join(get_sentiments("nrc"), by = "word") %>% # Use distinct emotion dictionary
-        filter(!sentiment %in% c("positive","negative")) %>% # Only look for distinct emotions
-        group_by(sentiment) %>% 
-        count(sentiment, sort = T) %>% 
-        ggplot() +
-                aes(x = fct_reorder(sentiment %>% str_to_title, -n), 
-                    y = n, 
-                    label = n) +
-                geom_col() +
-                geom_label(vjust = 1) +
-                theme_minimal() +
-                labs(title = "The occurance of words linked to distinct emotions in the speech", 
-                     x = "Word", 
-                     y = "Frequency")
-```
-
-# Let's put the sentiments on a map
-
-
 Let's see which countries are mentioned the most times. Obviously, the USA! Also Iran, Venezuela, and North Korea are mentioned several times. Apart from these, most countries are mentioned only a couple of times during the speech.
+
 
 ```{r message=FALSE, warning=FALSE}
 # Load map database
@@ -300,5 +280,97 @@ sentiment_map_data %>%
                      y = "Latitude")
 
 ```
+
+# Distinct emotions associated with each country
+
+Let's look into specific emotions using the NRC sentiment dictionary! 
+It is also possible to make an association between certain words and distinct emotions. The next plot shows the frequency of each emotion in the talk It seems like the emotion that dominated the speech was trust, followed by fear and anticipation.
+
+```{r}
+speech_words %>%
+        inner_join(get_sentiments("nrc"), by = "word") %>% # Use distinct emotion dictionary
+        filter(!sentiment %in% c("positive","negative")) %>% # Only look for distinct emotions
+        group_by(sentiment) %>% 
+        count(sentiment, sort = T) %>% 
+        ggplot() +
+                aes(x = fct_reorder(sentiment %>% str_to_title, -n), 
+                    y = n, 
+                    label = n) +
+                geom_col() +
+                geom_label(vjust = 1) +
+                theme_minimal() +
+                labs(title = "The occurance of words linked to distinct emotions in the speech", 
+                     x = "Word", 
+                     y = "Frequency")
+```
+
+We can also calculate the number of emotional words associated with distinct emotions by country.,
+As we can see, the absolute number of emotional words can be biased by the number of all mentions. So it might be more interesting to see the relative proportions.
+
+```{r fig.height=8, fig.width=9}
+sentence_emotions <-
+        speech_sentences %>% 
+        mutate(sentence_num = row_number(),
+               sentence_length = length(sentence)
+        ) %>% 
+        unnest_tokens(word, sentence, "words") %>% 
+        mutate(word = gsub("_", " ", word)) %>% 
+        # Here comes a nasty manual stemming of country names. Sadly, I failed to get satisfactory results  on country names with standard stemmers (I tried snowballC, hunspell, and textstem). I also tried to create a custom dictionary with added country names to no avail. What am I missing? Anyway, this works.        
+        mutate(word = word %>% 
+                       str_replace_all("'s$","") %>% # Cut 's
+                       if_else(. == "iranian", "iran", .) %>% 
+                       if_else(. %in% c("usans", "north koreans"), str_replace(., "ns$",""),.) %>% 
+                       if_else(. %in% c("usan","syrian","african","cuban","venezuelan"), str_replace(., "n$",""),.)
+        ) %>% 
+        left_join(get_sentiments("nrc"), by = "word") %>%
+        filter(!sentiment %in% c("positive","negative"))
+
+country_emotions <-
+        sentence_emotions %>% 
+        group_by(sentence_num) %>% 
+        count(sentiment) %>% 
+        drop_na(sentiment) %>% 
+        full_join(country_sentence, by = "sentence_num") %>% 
+        select(sentence_num, region = word, emotion = sentiment, n) %>% 
+        group_by(region, emotion) %>% 
+        summarise(n = sum(n, na.rm = T)) %>% 
+        drop_na(emotion, region) %>% 
+        ungroup() %>% 
+        right_join(modelr::data_grid(., region, emotion), by = c("region","emotion")) %>% 
+        mutate(n = if_else(is.na(n), 0L, n)) 
+
+# Barplot for emotions for each country
+country_emotions %>% 
+        mutate(region = region %>% str_to_title()) %>% 
+        ggplot() + 
+                aes(x = fct_rev(emotion), y = n) +
+                geom_col(position = "dodge") +
+                facet_wrap(~region) +
+                coord_flip() +
+                theme_minimal() +
+                labs(title = "Number of words associated with a distinct emotion",
+                     y = "Number of words associated with distinct emotions",
+                     x = NULL)
+```
+
+This next plot might be a bit difficult to read first. It shows the proportion of distinct emotional words, associated with a country. 
+For example, by looking at the plot, you can see that Ukraine had a high proportion of anger, fear, and sadness, compared to the  other countries. Russia was mentioned more with trust and anticipation. Venezuela was mentioned in sentences that contained the most disgust related words proportionally.
+
+```{r fig.height=8, fig.width=9}
+# Stacked area plot
+country_emotions %>% 
+        mutate(region = region %>% str_to_title()) %>%         
+        ggplot() + 
+                aes(x = fct_rev(region), y = n, fill = emotion, group = emotion) +
+                geom_area(position = "fill", color = "black") +
+                coord_flip() +
+                theme_minimal() +
+                scale_y_continuous(labels = scales::percent_format()) +
+                scale_fill_brewer(palette = "Accent") +
+                labs(title = "Proportion of distinct emotional words associated with a country",
+                     y = NULL,
+                     x = NULL)
+```
+
 
 All in all, this notebook shows the emotional tone of how countries were mentioned in Trump's UN speech. Obviously, sentiment scores do not necessarily reflect the US's opinion on these countries, especially for those with very few mentions. However, this method may be used in longer texts to demonstrate how certain topics (in this case, countries) can be associated with sentiments. 
