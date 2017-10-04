@@ -10,7 +10,7 @@ output:
 
 The UN speech that US president Donald Trump gave to the United Nations General Assembly on Sept. 19, 2017 was fascinating for several reasons. For me personally, it was interesting because the speech included surprisingly complex sentences and statements, not characteristic of Trump's  previous talks. It was also intriguing because this speech was quite undiplomatic and fierce to a point that steered the world to the brink of a thermonuclear war. At least North Korea is genuinely pissed.
 
-As it can be expected when a president addresses the UN, several countries were mentioned in the speech; some in a favorable and others in a negative context. I wanted to make an analysis that connects the sentiments of the speech with the countries. This analysis of course does not reflect the USA's opinion on the mentions, as the text is too short for this, and some countries are only mentioned a couple of times. 
+As it can be expected, when a president addresses the UN, several countries are mentioned; some in a favorable and others in a negative context. I wanted to connect the sentiments of the speech to the countries, and see the emotional context of these countries in the talk. This analysis of course does not reflect the USA's opinion on the countries, as the text is too short for this, and some countries are only mentioned a couple of times. 
 
 <center>
 ![](http://i0.kym-cdn.com/photos/images/newsfeed/000/519/726/2bf.gif)
@@ -68,7 +68,7 @@ speech_words <-
 
 # Exploring the text
 
-The following word cloud shows the words mentioned in the speech. Larger words were used more frequently than smaller ones.
+The following word cloud shows the words mentioned in the speech. Larger words were used more frequently than smaller ones. 
 
 ```{r fig.height=9, fig.width=9, message=FALSE, warning=FALSE}
 speech_words %>% 
@@ -109,7 +109,7 @@ speech_words %>%
         comparison.cloud(colors = c("red", "blue"))
 ```
 
-Let's see which countries are mentioned the most times. Obviously, the USA! Also Iran, Venezuela, and North Korea are mentioned several times. Apart from these, most countries are mentioned only a couple of times during the speech.
+Let's see which countries were mentioned the most. Obviously, the USA! Also Iran, Venezuela, and North Korea were mentioned several times. Apart from these, most countries were mentioned only a couple of times during the speech.
 
 
 ```{r message=FALSE, warning=FALSE}
@@ -162,6 +162,8 @@ trump_countries %>%
 
 ```
 
+# Checking how the speech sentiment develops over time, and what countries are mentioned
+
 Next, I wanted to see how the speech developed over time, and what was the sentiment of the sentences. 
 Moreover, I wanted to include which countries were mentioned in particular parts of the talk.
 
@@ -209,8 +211,6 @@ country_sentiment <-
 
 ```
 
-# Checking how the speech sentiment develops over time, and what countries are mentioned
-
 First, it is important to note that the sentiment analysis is based on the summarized sentiments for each sentence, which can be misleading. For example, in the middle of the speech, Israel and the US are mentioned in a very negative sentence. However, the negative tone was created to condemn Iran in the next sentence. So, you can see that the isolated analysis of the sentences can be misleading. To mitigate this error, I calculated the rolling mean for the sentence sentiments, so each sentence now contains the "spillover" sentiment from previous and following sentences.
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
@@ -244,11 +244,12 @@ sentence_sentiment %>%
 
 ```
 
-As we can see, Trump started off the speech with positive statements, and mostly praised the USA. Then he came up with his black list, with North Korea, China, Ukraine, Russia, and Israel mentioned in a negative context. As USA is also mingled in these sentences, it is unavoidable that it also receives some negative sentiment.
+As we can see, Trump started off the speech with positive statements, and mostly praised the USA. Then he came up with his black list, with North Korea, China, Ukraine, Russia, and Israel mentioned in a negative context. As USA is also mingled into these sentences, it is unavoidable that it also received some negative sentiment.
 Then the speech took a positive turn, and several Middle Eastern and African countries were referenced in a generally favorable context. 
-Later, South American countries - such as Cuba, and especially Venezuela - are mentioned along with some harsh words, while European countries like Poland, France, and UK are receive some kindness.
+Later, South American countries - such as Cuba, and especially Venezuela - are mentioned along with some harsh words, while European countries like Poland, France, and UK are received some kindness.
 
 So, how about summarizing the country sentiments throughout the whole text, and plot them on a map, to see what emotional context each country is mentioned?
+
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 sentiment_map_data <- 
@@ -281,10 +282,12 @@ sentiment_map_data %>%
 
 ```
 
+Interestingly, Israel received the lowest setiment score (as it was mentioned as a victim of genocide and hatred), so the negative sentiment was not directed toward the country; in contrast to Cuba and Venezuela. China, Ukraine and North Korea also obtained negative sentmiments in sum. Most countries remained in low positive range, and the positive endpoint of this scale was the USA, that collected the most positive sentiment.
+
 # Distinct emotions associated with each country
 
 Let's look into specific emotions using the NRC sentiment dictionary! 
-It is also possible to make an association between certain words and distinct emotions. The next plot shows the frequency of each emotion in the talk It seems like the emotion that dominated the speech was trust, followed by fear and anticipation.
+It is also possible to make an association between certain words and distinct emotions. The next plot shows the frequency of each emotion in the talk. It seems like the dominant emotion was trust, followed by fear and anticipation.
 
 ```{r}
 speech_words %>%
